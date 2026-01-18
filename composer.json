@@ -1,0 +1,17 @@
+{
+    "name": "farhanmullick/invoice-system",
+    "description": "Simple PHP invoice system",
+    "type": "project",
+    "require": {
+        "dompdf/dompdf": "^3.1",
+        "ramsey/uuid": "^4.9"
+    },
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Farhan Mullick",
+            "email": "38060872+Farhansadiqmullick@users.noreply.github.com"
+        }
+    ],
+    "minimum-stability": "stable"
+}
