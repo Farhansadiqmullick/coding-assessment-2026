@@ -10,12 +10,14 @@
  * Run with: php run_tests.php
  */
 
+require_once __DIR__ . '/../vendor/autoload.php'; //autoloader for composer
 require_once __DIR__ . '/../src/Invoice.php';
 require_once __DIR__ . '/../src/InvoiceCalculator.php';
 require_once __DIR__ . '/../src/jsonInvoiceRepair.php';
 require_once __DIR__ . '/../src/PDFGenerator.php';
 
-class InvoiceTest {
+class InvoiceTest
+{
 
     private $testsPassed = 0;
     private $testsFailed = 0;
@@ -24,7 +26,8 @@ class InvoiceTest {
     /**
      * Run all tests
      */
-    public function runAll() {
+    public function runAll()
+    {
         echo "Running Invoice Tests...\n";
         echo str_repeat("=", 50) . "\n\n";
 
@@ -33,6 +36,7 @@ class InvoiceTest {
         $this->test_add_multiple_items();
         $this->test_save_and_load();
         $this->test_tax_calculation();
+        $this->generate_pdf_test();
 
         echo "\n" . str_repeat("=", 50) . "\n";
         echo "Tests Passed: " . $this->testsPassed . "\n";
@@ -52,7 +56,8 @@ class InvoiceTest {
      * Test: Create basic invoice
      * Status: PASSING ✓
      */
-    private function test_create_invoice() {
+    private function test_create_invoice()
+    {
         $invoice = new Invoice("Test Customer");
 
         $this->assert(
@@ -69,7 +74,8 @@ class InvoiceTest {
      * This test fails because of the qty/quantity mismatch bug
      * The total comes back as 0 instead of expected value
      */
-    private function test_calculate_total() {
+    private function test_calculate_total()
+    {
         $invoice = new Invoice("Test Customer");
         $invoice->addItem("Test Item", 10.00, 2);
 
@@ -89,7 +95,8 @@ class InvoiceTest {
      *
      * Also fails due to the same qty/quantity bug
      */
-    private function test_add_multiple_items() {
+    private function test_add_multiple_items()
+    {
         $invoice = new Invoice("Test Customer");
         $invoice->addItem("Item 1", 10.00, 2);
         $invoice->addItem("Item 2", 15.00, 3);
@@ -112,7 +119,8 @@ class InvoiceTest {
      * Fails because saveToFile() overwrites the entire file
      * When loading, it can't find the invoice because structure is wrong
      */
-    private function test_save_and_load() {
+    private function test_save_and_load()
+    {
         $testFile = __DIR__ . '/../data/invoices.json';
 
         // Clean up first
@@ -128,6 +136,7 @@ class InvoiceTest {
         // Create and save second invoice
         $invoice2 = new Invoice("Customer 2");
         $invoice2->addItem("Item B", 200.00, 1);
+        $invoice2->applyDiscount(20);
         $invoice2->saveToFile($testFile);
 
         // Try to load first invoice - this will fail
@@ -160,24 +169,70 @@ class InvoiceTest {
      * This works because the hardcoded tax rate is consistent
      * (Even though it should load from JSON instead)
      */
-    private function test_tax_calculation() {
+    private function test_tax_calculation()
+    {
         $subtotal = 100.00;
-        $tax = InvoiceCalculator::calculateTax($subtotal, 'US-CA');
+        $tax = InvoiceCalculator::calculateTax($subtotal, 'US-NY'); //change state for testing
 
-        // Hardcoded to 10% currently
-        $expected = 10.00;
+        // Hardcoded to 8% currently
+        $expected = 8.00; //according to json file, it is 8% to test
 
         $this->assert(
             $tax === $expected,
             "test_tax_calculation",
-            "Tax should be $10.00, got $" . number_format($tax, 2)
+            "Tax should be $8.00, got $" . number_format($tax, 2)
         );
+    }
+
+    private function generate_pdf_test()
+    {
+        $testFile = __DIR__ . '/../data/invoices.json';
+
+        $invoice_files = json_decode(file_get_contents($testFile), true);
+
+
+        if (!is_array($invoice_files) || empty($invoice_files)) {
+            $this->assert(false, 'pdf_invoice_generated', 'No invoices found');
+            return;
+        }
+
+        //taking the last json file
+        // $latest_invoice = $invoice_files[count($invoice_files) - 1];
+
+        //random data
+        // $invoice1 = new Invoice("Customer 1");
+        // $invoice1->addItem("Item A", 100.00, 1);
+
+        $invoice2 = new Invoice("Customer 2");
+        $invoice2->addItem("Item B", 200.00, 1);
+        $invoice2->applyDiscount(20); //applied discount and generate PDF
+
+        $latest_invoice = $invoice2->toArray();
+
+        try {
+            //generate PDF after getting all the data
+            $pdf = new PDFGenerator();
+            $file = $pdf->generatePDF($latest_invoice);
+
+            $this->assert(
+                $file,
+                "pdf_invoice_generated",
+                "PDF generated successfully"
+            );
+        } catch (Exception $e) {
+            $this->assert(
+                false,
+                "pdf_invoice_generated",
+                "Failed to generate PDF: " . $e->getMessage()
+            );
+        }
     }
 
     /**
      * Simple assertion helper
      */
-    private function assert($condition, $testName, $message) {
+    private function assert($condition, $testName, $message)
+    {
         if ($condition) {
             $this->testsPassed++;
             echo "✓ " . $testName . "\n";

@@ -13,7 +13,12 @@
  * - Policy has been updated - external libraries now allowed
  * - Can proceed with implementation using Composer packages
  */
-class PDFGenerator {
+
+use Dompdf\Dompdf;
+use Dompdf\Options;
+
+class PDFGenerator
+{
 
     /**
      * Generate PDF from invoice
@@ -34,11 +39,32 @@ class PDFGenerator {
      * @return string PDF file path or content
      * @throws Exception Currently not implemented
      */
-    public function generatePDF($invoice) {
-        throw new Exception(
-            "PDF generation not implemented. " .
-            "You may now use Composer packages (FPDF, TCPDF, Dompdf, etc.)."
-        );
+    public function generatePDF(array $invoice): string
+    {
+        if (empty($invoice['id']) || empty($invoice['items'])) {
+            throw new InvalidArgumentException('Invalid invoice data');
+        }
+
+        $html = $this->generateHTML($invoice);
+
+        $options = new Options();
+        $options->set('defaultFont', 'Helvetica');
+
+        $dompdf = new Dompdf($options);
+        $dompdf->loadHtml($html);
+        $dompdf->setPaper('A4', 'portrait');
+        $dompdf->render();
+
+        $dir = 'data/pdfs';
+        if (!is_dir($dir)) {
+            mkdir($dir, 0755, true);
+        }
+
+        $filename = $dir . '/invoice_' . $invoice['id'] . '.pdf';
+
+        file_put_contents($filename, $dompdf->output());
+
+        return $filename;
     }
 
     /**
@@ -51,16 +77,24 @@ class PDFGenerator {
      * @param Invoice $invoice
      * @return string HTML content
      */
-    private function generateHTML($invoice) {
-        // Basic template - would need styling
+    private function generateHTML($invoice)
+    {
+        // Normalize access (object OR array)
+        $id       = is_array($invoice) ? $invoice['id'] : $invoice->getId();
+        $customer = is_array($invoice) ? $invoice['customer'] : $invoice->getCustomer();
+        $items    = is_array($invoice) ? $invoice['items'] : $invoice->getItems();
+        $discount = is_array($invoice) ? $invoice['discount'] : $invoice->getDiscount();
+        $total    = is_array($invoice) ? $invoice['total'] : $invoice->getTotal();
+
         $html = '<html><head><title>Invoice</title></head><body>';
-        $html .= '<h1>Invoice #' . $invoice->getId() . '</h1>';
-        $html .= '<p>Customer: ' . htmlspecialchars($invoice->getCustomer()) . '</p>';
+        $html .= '<h1>Invoice #' . htmlspecialchars($id) . '</h1>';
+        $html .= '<p>Customer: ' . htmlspecialchars($customer) . '</p>';
+
         $html .= '<table border="1">';
         $html .= '<tr><th>Item</th><th>Price</th><th>Quantity</th><th>Total</th></tr>';
 
-        foreach ($invoice->getItems() as $item) {
-            $qty = isset($item['quantity']) ? $item['quantity'] : $item['qty'];
+        foreach ($items as $item) {
+            $qty = $item['qty'] ?? $item['quantity'];
             $lineTotal = $item['price'] * $qty;
 
             $html .= '<tr>';
@@ -72,7 +106,8 @@ class PDFGenerator {
         }
 
         $html .= '</table>';
-        $html .= '<p><strong>Total: $' . number_format($invoice->getTotal(), 2) . '</strong></p>';
+        $html .= '<p>Discount: $' . $discount . '</p>'; // applied discount
+        $html .= '<p><strong>Total: $' . number_format($total, 2) . '</strong></p>';
         $html .= '</body></html>';
 
         return $html;
@@ -85,7 +120,8 @@ class PDFGenerator {
      * @param Invoice $invoice
      * @return string HTML file path
      */
-    public function exportHTML($invoice) {
+    public function exportHTML($invoice)
+    {
         $html = $this->generateHTML($invoice);
         $filename = 'invoice_' . $invoice->getId() . '.html';
         file_put_contents($filename, $html);
@@ -96,7 +132,8 @@ class PDFGenerator {
      * Attempted to write raw PDF - gave up after 2 hours
      * Keeping this as evidence of how hard this is
      */
-    private function generateRawPDF_ABANDONED($invoice) {
+    private function generateRawPDF_ABANDONED($invoice)
+    {
         // PDF header
         // %PDF-1.4
         // Then you need:

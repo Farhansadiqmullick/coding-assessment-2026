@@ -18,20 +18,40 @@ class InvoiceCalculator {
      * @param string $region Region code (e.g., "US-CA", "CA-ON")
      * @return float Tax amount
      */
-    public static function calculateTax($subtotal, $region = 'US-CA') {
-        // TEMPORARY hardcoded value - need to load from JSON
-        // Client said tax rates change frequently so should be in config
-        $taxRate = 0.10;
+    public static function calculateTax($subtotal, $region = 'US-CA')
+    {
+        if (!is_numeric($subtotal) || $subtotal <= 0) {
+            return 0.00;
+        }
 
-        // TODO: Load from tax_rates.json like this:
-        // $taxData = json_decode(file_get_contents('data/tax_rates.json'), true);
-        // Parse $region to get country and state
-        // Look up actual rate
-        // Handle default rates
-        //
-        // Ran out of time Friday, will fix Monday
+        $taxFile = __DIR__ . '/../data/tax_rates.json';
 
-        return $subtotal * $taxRate;
+        if (!file_exists($taxFile)) {
+            throw new Exception('Tax rates file not found');
+        }
+
+        $taxData = json_decode(file_get_contents($taxFile), true);
+
+        if (!is_array($taxData)) {
+            throw new Exception('Invalid tax rates configuration');
+        }
+
+        // Parse region: "US-CA" → ["US", "CA"]
+        $parts = explode('-', strtoupper($region));
+        $country = $parts[0] ?? null;
+        $state   = $parts[1] ?? null;
+
+        $rate = 0.0;
+
+        if ($country && isset($taxData[$country])) {
+            if ($state && isset($taxData[$country][$state])) {
+                $rate = $taxData[$country][$state];
+            } elseif (isset($taxData[$country]['default'])) {
+                $rate = $taxData[$country]['default'];
+            }
+        }
+
+        return round($subtotal * $rate, 2);
     }
 
     /**

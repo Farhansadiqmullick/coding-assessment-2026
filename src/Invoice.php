@@ -7,6 +7,9 @@
  * Started: 2 weeks ago
  * Last modified: Friday (was in a hurry)
  */
+
+use Ramsey\Uuid\Uuid;
+
 class Invoice
 {
 
@@ -19,7 +22,7 @@ class Invoice
     public function __construct($customerName)
     {
         $this->customer = $customerName;
-        $this->id = time(); // Not sure if this is the best approach...
+        $this->id = Uuid::uuid4()->toString(); //use composer package
         $this->createdAt = date('Y-m-d H:i:s');
     }
 
@@ -147,6 +150,16 @@ class Invoice
     {
         return $this->items;
     }
+
+
+    /**
+     * Get discount
+     */
+    public function getDiscount()
+    {
+        return $this->discount;
+    }
+
 
     /**
      * Convert invoice to array for JSON serialization

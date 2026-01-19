@@ -97,5 +97,33 @@
         "discount": 0,
         "total": 200,
         "created_at": "2026-01-18 16:58:54"
+    },
+    {
+        "id": "b989eb8c-524a-4550-a9a0-82dac6b1509a",
+        "customer": "Customer 1",
+        "items": [
+            {
+                "name": "Item A",
+                "price": 100,
+                "qty": 1
+            }
+        ],
+        "discount": 0,
+        "total": 100,
+        "created_at": "2026-01-19 04:14:16"
+    },
+    {
+        "id": "34bfedc8-4c07-4b13-b08e-9ba6a32f7778",
+        "customer": "Customer 2",
+        "items": [
+            {
+                "name": "Item B",
+                "price": 200,
+                "qty": 1
+            }
+        ],
+        "discount": 40,
+        "total": 160,
+        "created_at": "2026-01-19 04:14:16"
     }
 ]
